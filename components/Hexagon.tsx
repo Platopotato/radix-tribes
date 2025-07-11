@@ -44,16 +44,6 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
     if (!tribesOnHex || tribesOnHex.length === 0) return null;
     const hexCoords = formatHexCoords(q, r);
 
-    const getIconStyle = (tribe: Tribe) => {
-        if (!playerTribe) return 'text-slate-400'; // Admin view
-        if (tribe.id === playerTribe.id) return 'text-green-400';
-        
-        const status = playerTribe.diplomacy[tribe.id]?.status;
-        if (status === DiplomaticStatus.Alliance) return 'text-blue-400';
-        if (status === DiplomaticStatus.War) return 'text-red-500';
-        return 'text-yellow-400'; // Neutral
-    };
-    
     const getTroopBoxStyle = (tribe: Tribe) => {
         if (!playerTribe) return 'bg-slate-600/80';
         if (tribe.id === playerTribe.id) return 'bg-green-700/80';
@@ -74,7 +64,7 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
         
         return (
             <g className="pointer-events-none transform-gpu transition-transform group-hover:-translate-y-1 duration-200">
-                <svg x={-size * 0.5} y={-size * 0.5} width={size} height={size} viewBox="0 0 24 24" className={`fill-current ${getIconStyle(tribe)}`} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
+                <svg x={-size * 0.5} y={-size * 0.5} width={size} height={size} viewBox="0 0 24 24" className="fill-current" style={{ color: tribe.color, filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
                     {icon}
                 </svg>
                 {troops > 0 && (
@@ -106,7 +96,7 @@ export const Hexagon: React.FC<HexagonProps> = (props) => {
                 const xOffset = startX + index * (iconSize / 1.8);
                 return (
                     <g key={tribe.id} transform={`translate(${xOffset}, 0)`}>
-                         <svg x={-iconSize/2} y={-iconSize/2} width={iconSize} height={iconSize} viewBox="0 0 24 24" className={`fill-current ${getIconStyle(tribe)}`} style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
+                         <svg x={-iconSize/2} y={-iconSize/2} width={iconSize} height={iconSize} viewBox="0 0 24 24" className="fill-current" style={{ color: tribe.color, filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))' }}>
                             {icon}
                         </svg>
                     </g>

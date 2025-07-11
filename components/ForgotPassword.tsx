@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import * as api from '../lib/api';
+import * as Auth from '../lib/auth';
 import Card from './ui/Card';
 import Button from './ui/Button';
 
@@ -20,38 +20,31 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccess, onCancel }) 
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleUsernameSubmit = async (e: React.FormEvent) => {
+  const handleUsernameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
-    try {
-      const { question } = await api.getSecurityQuestion(username);
+    const question = Auth.getUserQuestion(username);
+    if (question) {
       setSecurityQuestion(question);
       setStep('answer_question');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Username not found.');
-    } finally {
-        setIsLoading(false);
+    } else {
+      setError('Username not found.');
     }
   };
 
-  const handleAnswerSubmit = async (e: React.FormEvent) => {
+  const handleAnswerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
-    try {
-      await api.verifySecurityAnswer(username, securityAnswer);
+    const isCorrect = Auth.verifySecurityAnswer(username, securityAnswer);
+    if (isCorrect) {
       setStep('reset_password');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Incorrect answer.');
-    } finally {
-        setIsLoading(false);
+    } else {
+      setError('Incorrect answer.');
     }
   };
 
-  const handlePasswordResetSubmit = async (e: React.FormEvent) => {
+  const handlePasswordResetSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (newPassword !== confirmPassword) {
@@ -62,16 +55,12 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccess, onCancel }) 
       setError('Password must be at least 6 characters long.');
       return;
     }
-    
-    setIsLoading(true);
-    try {
-      await api.resetPassword(username, newPassword);
-      setSuccess('Password reset successfully! You will be redirected to the login page.');
+    const success = Auth.resetPassword(username, newPassword);
+    if (success) {
+      setSuccess('Password reset successfully! You can now log in.');
       setTimeout(onSuccess, 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
-    } finally {
-        setIsLoading(false);
+    } else {
+      setError('An unexpected error occurred. Please try again.');
     }
   };
 
@@ -86,9 +75,9 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccess, onCancel }) 
             <h2 className="text-xl font-bold text-center text-amber-400">Find Your Account</h2>
             <div>
               <label htmlFor="username-forgot" className="block text-sm font-medium text-slate-300 mb-1">Username</label>
-              <input type="text" id="username-forgot" value={username} onChange={e => setUsername(e.target.value)} required className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" disabled={isLoading} />
+              <input type="text" id="username-forgot" value={username} onChange={e => setUsername(e.target.value)} required className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Searching...' : 'Find Account'}</Button>
+            <Button type="submit" className="w-full">Find Account</Button>
           </form>
         );
       case 'answer_question':
@@ -98,9 +87,9 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccess, onCancel }) 
             <p className="text-slate-400 text-sm">For user: <span className="font-bold">{username}</span></p>
             <div>
               <p className="block text-sm font-medium text-slate-300 mb-1">{securityQuestion}</p>
-              <input type="password" value={securityAnswer} onChange={e => setSecurityAnswer(e.target.value)} required className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" disabled={isLoading} />
+              <input type="password" value={securityAnswer} onChange={e => setSecurityAnswer(e.target.value)} required className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Verifying...' : 'Verify'}</Button>
+            <Button type="submit" className="w-full">Verify</Button>
           </form>
         );
       case 'reset_password':
@@ -109,13 +98,13 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccess, onCancel }) 
             <h2 className="text-xl font-bold text-center text-amber-400">Reset Your Password</h2>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">New Password</label>
-              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" disabled={isLoading} />
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">Confirm New Password</label>
-              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" disabled={isLoading}/>
+              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200" />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Resetting...' : 'Reset Password'}</Button>
+            <Button type="submit" className="w-full">Reset Password</Button>
           </form>
         );
     }

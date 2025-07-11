@@ -1,35 +1,21 @@
 
 
-import React, { useMemo } from 'react';
+
+import React from 'react';
 import { TRIBE_ICONS } from '../constants';
 
 interface IconSelectorProps {
   selectedIcon: string;
   onSelect: (iconKey: string) => void;
-  usedIcons: string[];
 }
 
-const IconSelector: React.FC<IconSelectorProps> = ({ selectedIcon, onSelect, usedIcons }) => {
-    const availableIcons = useMemo(() => {
-        return Object.entries(TRIBE_ICONS).filter(([key]) => !usedIcons.includes(key));
-    }, [usedIcons]);
-
-    if (availableIcons.length === 0) {
-        return (
-            <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Choose Your Tribe's Icon</label>
-                <div className="p-3 bg-slate-700/50 rounded-lg">
-                    <p className="text-center text-red-500 italic">All icons are currently in use.</p>
-                </div>
-            </div>
-        )
-    }
+const IconSelector: React.FC<IconSelectorProps> = ({ selectedIcon, onSelect }) => {
 
   return (
     <div>
       <label className="block text-sm font-medium text-slate-300 mb-2">Choose Your Tribe's Icon</label>
       <div className="flex justify-center items-center flex-wrap gap-4 p-3 bg-slate-700/50 rounded-lg">
-        {availableIcons.map(([key, icon]) => (
+        {Object.entries(TRIBE_ICONS).map(([key, icon]) => (
           <button
             key={key}
             type="button"

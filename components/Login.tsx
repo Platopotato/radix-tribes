@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
-import * as api from '../lib/api';
+import * as Auth from '../lib/auth';
 import { User } from '../types';
 import Card from './ui/Card';
 import Button from './ui/Button';
 
 interface LoginProps {
-  onLoginSuccess: (user: User, token: string) => void;
+  onLoginSuccess: (user: User) => void;
   onSwitchToRegister: () => void;
   onNavigateToForgotPassword: () => void;
 }
@@ -15,19 +15,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
-    try {
-      const { user, token } = await api.login(username, password);
-      onLoginSuccess(user, token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid username or password.');
-    } finally {
-      setIsLoading(false);
+    const user = Auth.login(username, password);
+    if (user) {
+      onLoginSuccess(user);
+    } else {
+      setError('Invalid username or password.');
     }
   };
 
@@ -53,7 +48,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
               className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200 focus:ring-amber-500 focus:border-amber-500"
               placeholder="eg., Platopotato.."
               required
-              disabled={isLoading}
             />
           </div>
           <div>
@@ -66,7 +60,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
               className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200 focus:ring-amber-500 focus:border-amber-500"
               placeholder="Password"
               required
-              disabled={isLoading}
             />
           </div>
           <div className="text-right text-sm">
@@ -75,8 +68,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToRegister, onNav
             </button>
           </div>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Entering...' : 'Enter the Wasteland'}
+          <Button type="submit" className="w-full">
+            Enter the Wasteland
           </Button>
            <p className="text-sm text-center text-slate-400">
             Don't have an account?{' '}

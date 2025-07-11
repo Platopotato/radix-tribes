@@ -1,7 +1,8 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { TribeStats, User } from '../types';
-import { MAX_STAT_POINTS, MIN_STAT_VALUE, TRIBE_ICONS } from '../constants';
+import { MAX_STAT_POINTS, MIN_STAT_VALUE, TRIBE_ICONS, TRIBE_COLORS } from '../constants';
 import StatAllocator from './StatAllocator';
 import IconSelector from './IconSelector';
 import Card from './ui/Card';
@@ -11,26 +12,39 @@ type TribeCreationData = {
     playerName: string;
     tribeName: string;
     icon: string;
+    color: string;
     stats: TribeStats;
 };
 
 interface TribeCreationProps {
   onTribeCreate: (tribe: TribeCreationData) => void;
   user: User;
-  usedIcons: string[];
 }
 
-const TribeCreation: React.FC<TribeCreationProps> = ({ onTribeCreate, user, usedIcons }) => {
+const ColorSelector: React.FC<{ selectedColor: string; onSelect: (color: string) => void; }> = ({ selectedColor, onSelect }) => (
+    <div>
+        <label className="block text-sm font-medium text-slate-300 mb-2">Choose Your Tribe's Color</label>
+        <div className="flex justify-center items-center flex-wrap gap-2 p-3 bg-slate-700/50 rounded-lg">
+            {TRIBE_COLORS.map(color => (
+                <button
+                    key={color}
+                    type="button"
+                    onClick={() => onSelect(color)}
+                    className={`w-10 h-10 rounded-full transition-all duration-200 ${selectedColor === color ? 'ring-2 ring-offset-2 ring-offset-slate-800 ring-amber-400' : ''}`}
+                    style={{ backgroundColor: color }}
+                />
+            ))}
+        </div>
+    </div>
+);
+
+const TribeCreation: React.FC<TribeCreationProps> = ({ onTribeCreate, user }) => {
   const [playerName, setPlayerName] = useState(user.username);
   const [tribeName, setTribeName] = useState('');
   
-  const getInitialIcon = () => {
-    const allIcons = Object.keys(TRIBE_ICONS);
-    const availableIcons = allIcons.filter(icon => !usedIcons.includes(icon));
-    return availableIcons.length > 0 ? availableIcons[0] : (allIcons[0] || 'skull');
-  };
+  const [selectedIcon, setSelectedIcon] = useState<string>(Object.keys(TRIBE_ICONS)[0] || 'skull');
+  const [selectedColor, setSelectedColor] = useState<string>(TRIBE_COLORS[0]);
 
-  const [selectedIcon, setSelectedIcon] = useState<string>(getInitialIcon);
   const [stats, setStats] = useState<TribeStats>({
     charisma: MIN_STAT_VALUE,
     intelligence: MIN_STAT_VALUE,
@@ -47,13 +61,6 @@ const TribeCreation: React.FC<TribeCreationProps> = ({ onTribeCreate, user, used
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const allIcons = Object.keys(TRIBE_ICONS);
-    const availableIcons = allIcons.filter(icon => !usedIcons.includes(icon));
-    if (availableIcons.length === 0) {
-        alert('All available tribe icons are currently in use. Please contact the administrator.');
-        return;
-    }
-
     if (remainingPoints !== 0 || !playerName || !tribeName) {
       alert('Please fill out all fields and allocate all stat points.');
       return;
@@ -63,6 +70,7 @@ const TribeCreation: React.FC<TribeCreationProps> = ({ onTribeCreate, user, used
       playerName,
       tribeName,
       icon: selectedIcon,
+      color: selectedColor,
       stats,
     };
     onTribeCreate(newTribeData);
@@ -99,7 +107,8 @@ const TribeCreation: React.FC<TribeCreationProps> = ({ onTribeCreate, user, used
             </div>
           </div>
 
-          <IconSelector selectedIcon={selectedIcon} onSelect={setSelectedIcon} usedIcons={usedIcons} />
+          <IconSelector selectedIcon={selectedIcon} onSelect={setSelectedIcon} />
+          <ColorSelector selectedColor={selectedColor} onSelect={setSelectedColor} />
           
           <StatAllocator stats={stats} setStats={setStats} remainingPoints={remainingPoints} />
 

@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { TribeStats } from '../types';
 import { MIN_STAT_VALUE, MAX_STAT_POINTS } from '../constants';
@@ -13,7 +12,7 @@ interface StatAllocatorProps {
 const StatAllocator: React.FC<StatAllocatorProps> = ({ stats, setStats, remainingPoints }) => {
   const handleStatChange = (stat: keyof TribeStats, delta: number) => {
     setStats(prevStats => {
-        const currentTotal = Object.values(prevStats).reduce((sum, val) => sum + val, 0);
+        const currentTotal = (Object.keys(prevStats) as Array<keyof TribeStats>).reduce((sum, key) => sum + prevStats[key], 0);
 
         // First-level check: Prevent invalid operations based on the current state.
         // This prevents adding points if we are already at or over the max.
@@ -34,7 +33,7 @@ const StatAllocator: React.FC<StatAllocatorProps> = ({ stats, setStats, remainin
         
         // Second-level check: A final safeguard. The new total should not exceed the max.
         // This handles any edge cases and ensures the final state is always valid.
-        const newTotal = Object.values(newStats).reduce((sum, val) => sum + val, 0);
+        const newTotal = (Object.keys(newStats) as Array<keyof TribeStats>).reduce((sum, key) => sum + newStats[key], 0);
         if (newTotal > MAX_STAT_POINTS) {
             return prevStats; // The change was invalid, revert.
         }

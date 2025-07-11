@@ -1,5 +1,6 @@
 
 
+
 export enum JourneyType {
     Move = 'Move',
     Attack = 'Attack',
@@ -172,6 +173,7 @@ export interface Tribe {
   playerName: string;
   tribeName: string;
   icon: string;
+  color: string;
   stats: TribeStats;
   globalResources: GlobalResources;
   garrisons: Record<string, Garrison>; // Key is hex coordinate string

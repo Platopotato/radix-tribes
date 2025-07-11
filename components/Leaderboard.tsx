@@ -23,8 +23,6 @@ const getStatusPill = (relation?: DiplomaticRelation) => {
     return <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${styles[status]}`}>{status}</span>;
   };
 
-const TERRITORY_COLORS = ['#4299E1', '#F56565', '#48BB78', '#ED8936', '#9F7AEA', '#ECC94B', '#38B2AC', '#ED64A6', '#A0AEC0', '#667EEA', '#F687B3', '#D69E2E', '#319795', '#6B46C1', '#C53030', '#059669'];
-
 const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBack }) => {
 
     const rankedTribes = useMemo(() => {
@@ -40,10 +38,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
 
     const territoryData = useMemo(() => {
         const data = new Map<string, { color: string; tribeName: string }>();
-        rankedTribes.forEach((tribe, index) => {
-            const color = TERRITORY_COLORS[index % TERRITORY_COLORS.length];
+        rankedTribes.forEach((tribe) => {
             Object.keys(tribe.garrisons).forEach(location => {
-                data.set(location, { color, tribeName: tribe.tribeName });
+                data.set(location, { color: tribe.color, tribeName: tribe.tribeName });
             });
         });
         return data;
@@ -82,7 +79,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ gameState, playerTribe, onBac
                                             <td className="p-3 text-lg font-bold text-slate-300">#{index + 1}</td>
                                             <td className="p-3">
                                                 <div className="flex items-center space-x-3">
-                                                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: TERRITORY_COLORS[index % TERRITORY_COLORS.length] }}>
+                                                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: tribe.color }}>
                                                         <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current text-white">
                                                             {TRIBE_ICONS[tribe.icon]}
                                                         </svg>

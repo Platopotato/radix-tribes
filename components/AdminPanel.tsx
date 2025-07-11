@@ -1,10 +1,9 @@
-
 import React, { useState, useRef } from 'react';
-import { Tribe, User, GameState, ChiefRequest, AssetRequest } from '../types';
+import { Tribe, User, GameState, FullBackupState, ChiefRequest, AssetRequest } from '../types';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationModal from './ui/ConfirmationModal';
-import * as api from '../lib/api';
+import * as Auth from '../lib/auth';
 
 interface AdminPanelProps {
   gameState: GameState;
@@ -13,7 +12,7 @@ interface AdminPanelProps {
   onProcessTurn: () => void;
   onRemovePlayer: (userId: string) => void;
   onStartNewGame: () => void;
-  onLoadBackup: (backupFile: File) => void;
+  onLoadBackup: (backup: FullBackupState) => void;
   onApproveChief: (requestId: string) => void;
   onDenyChief: (requestId: string) => void;
   onApproveAsset: (requestId: string) => void;
@@ -24,23 +23,14 @@ interface AdminPanelProps {
 const AdminPanel: React.FC<AdminPanelProps> = (props) => {
   const { gameState, onBack, onNavigateToEditor, onProcessTurn, onRemovePlayer, onStartNewGame, onLoadBackup, onApproveChief, onDenyChief, onApproveAsset, onDenyAsset, onAddAITribe } = props;
   const { tribes: allTribes, chiefRequests, assetRequests } = gameState;
+  const allUsers = Auth.getAllUsers();
+  const currentUser = Auth.getCurrentUser();
   
   const [userToRemove, setUserToRemove] = useState<User | null>(null);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
 
-  React.useEffect(() => {
-    const fetchUsers = async () => {
-        try {
-            const users = await api.getAllUsers();
-            setAllUsers(users);
-        } catch (error) {
-            console.error("Failed to fetch users", error);
-        }
-    };
-    fetchUsers();
-  }, []);
+  if (!currentUser) return null;
 
   const handleConfirmRemove = () => {
     if (userToRemove) {
@@ -53,7 +43,25 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     onStartNewGame();
     setShowNewGameConfirm(false);
   };
-  
+
+  const handleSaveBackup = () => {
+    const backupState: FullBackupState = {
+        gameState: gameState,
+        users: allUsers
+    };
+    const stateString = JSON.stringify(backupState, null, 2);
+    const blob = new Blob([stateString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().split('T')[0];
+    a.href = url;
+    a.download = `radix-tribes-backup-${date}.json`;
+    document.body.appendChild(a);
+a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleLoadBackupClick = () => {
     fileInputRef.current?.click();
   };
@@ -62,11 +70,28 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    onLoadBackup(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') throw new Error('Invalid file format');
+        const loadedData = JSON.parse(text);
 
-    if (event.target) {
-        event.target.value = '';
-    }
+        if (loadedData.gameState && loadedData.users && Array.isArray(loadedData.users)) {
+          onLoadBackup(loadedData as FullBackupState);
+        } else {
+          throw new Error('File does not appear to be a valid full game state backup.');
+        }
+      } catch (error) {
+        console.error('Failed to load game state:', error);
+        alert(`Error loading file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        if (event.target) {
+          event.target.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
   };
 
   const pendingChiefRequests = (chiefRequests || []).filter(r => r.status === 'pending');
@@ -207,7 +232,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
                           <td className="p-2 text-slate-400 capitalize">{user.role}</td>
                           <td className="p-2 font-mono text-xs">{user.id}</td>
                           <td className="p-2">
-                            {user.role === 'player' && (
+                            {user.role === 'player' && user.id !== currentUser.id && (
                                 <Button 
                                     onClick={() => setUserToRemove(user)}
                                     className="bg-red-800 hover:bg-red-700 text-xs py-1 px-2"
@@ -251,7 +276,10 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
             
             <Card title="Game Data Management">
               <div className="space-y-4">
-                  <p className="text-sm text-slate-400">Upload a legacy backup file to the server. The server will handle migration and state update.</p>
+                  <p className="text-sm text-slate-400">Save the entire game state and all users to a file, or load a previous backup.</p>
+                  <Button className="w-full" variant="secondary" onClick={handleSaveBackup}>
+                    Save Game Backup
+                  </Button>
                   <Button className="w-full" variant="secondary" onClick={handleLoadBackupClick}>
                     Load Game Backup
                   </Button>

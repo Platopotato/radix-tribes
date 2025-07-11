@@ -1,5 +1,5 @@
 import { Tribe, TribeStats, AIType, Garrison, DiplomaticStatus } from '../../types';
-import { TRIBE_ICONS, INITIAL_GLOBAL_RESOURCES, MIN_STAT_VALUE, MAX_STAT_POINTS } from '../../constants';
+import { TRIBE_ICONS, INITIAL_GLOBAL_RESOURCES, MIN_STAT_VALUE, MAX_STAT_POINTS, TRIBE_COLORS } from '../../constants';
 import { getHexesInRange, parseHexCoords } from '../mapUtils';
 
 const AI_NAME_PREFIXES = ['Rust', 'Sand', 'Scrap', 'Dust', 'Iron', 'Ash', 'Grave', 'Wasteland', 'Sunken', 'Forgotten'];
@@ -35,6 +35,7 @@ export function generateAITribe(availableStartLocation: string, existingTribeNam
 
     const iconKeys = Object.keys(TRIBE_ICONS);
     const icon = iconKeys[Math.floor(Math.random() * iconKeys.length)];
+    const color = TRIBE_COLORS[Math.floor(Math.random() * TRIBE_COLORS.length)];
 
     const startCoords = parseHexCoords(availableStartLocation);
     const initialExplored = getHexesInRange(startCoords, 2);
@@ -53,6 +54,7 @@ export function generateAITribe(availableStartLocation: string, existingTribeNam
         playerName: 'AI Controller',
         tribeName,
         icon,
+        color,
         stats: generateRandomStats(),
         location: availableStartLocation,
         globalResources: {

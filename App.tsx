@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Tribe, User, GameState, HexData, GameAction, TribeStats } from './types';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Tribe, User, GameState, HexData, GameAction, TribeStats, FullBackupState, ChiefRequest, AssetRequest, ActionType, DiplomaticProposal, DiplomaticStatus, Garrison, DiplomaticRelation } from './types';
 import TribeCreation from './components/TribeCreation';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
@@ -10,195 +11,205 @@ import MapEditor from './components/MapEditor';
 import ForgotPassword from './components/ForgotPassword';
 import Leaderboard from './components/Leaderboard';
 import TransitionScreen from './components/TransitionScreen';
-import * as api from './lib/api';
 import * as Auth from './lib/auth';
+import * as server from './lib/server';
+import { INITIAL_GLOBAL_RESOURCES, INITIAL_GARRISON } from './constants';
+import { getHexesInRange, parseHexCoords } from './lib/mapUtils';
 
-type View = 'login' | 'register' | 'game' | 'admin' | 'create_tribe' | 'map_editor' | 'forgot_password' | 'leaderboard' | 'transition' | 'loading';
+type View = 'login' | 'register' | 'game' | 'admin' | 'create_tribe' | 'map_editor' | 'forgot_password' | 'leaderboard' | 'transition';
 
 type TribeCreationData = {
     playerName: string;
     tribeName: string;
     icon: string;
+    color: string;
     stats: TribeStats;
 };
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [view, setView] = useState<View>('loading');
-  const [transitionMessage, setTransitionMessage] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<View>('login');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
-  const fetchGameState = useCallback(async () => {
-      try {
-        setError(null);
-        const state = await api.getGameState();
-        setGameState(state);
-        return state;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch game state.');
-        Auth.logout();
-        setCurrentUser(null);
-        setView('login');
-        return null;
-      }
-  }, []);
-
-  const initializeApp = useCallback(async () => {
-    const token = Auth.getToken();
-    if (token) {
-        try {
-            const user = await api.getMe();
-            setCurrentUser(user);
-            const state = await fetchGameState();
-            if(user.role === 'admin') {
-                setView('game');
-            } else {
-                const userTribe = state?.tribes.find(t => t.playerId === user.id);
-                setView(userTribe ? 'game' : 'create_tribe');
-            }
-        } catch (e) {
-            handleLogout(); // Token is invalid or expired
-        }
-    } else {
-        setView('login');
+  useEffect(() => {
+    const user = Auth.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
     }
-  }, [fetchGameState]);
-
+    server.getGameState().then(initialState => {
+      setGameState(initialState);
+      setIsLoading(false);
+    });
+  }, []);
+  
+  const playerTribe = useMemo(() => {
+    if (!currentUser || !gameState) return undefined;
+    return gameState.tribes.find(t => t.playerId === currentUser.id);
+  }, [currentUser, gameState]);
 
   useEffect(() => {
-    initializeApp();
-  }, [initializeApp]);
-  
-  const handleLoginSuccess = async (user: User, token: string) => {
-    Auth.saveToken(token);
-    setCurrentUser(user);
-    setView('loading');
-    const state = await fetchGameState();
-    if (state) {
-        if (user.role === 'admin') {
-            setView('game');
-        } else {
-            const userTribe = state.tribes.find(t => t.playerId === user.id);
-            setView(userTribe ? 'game' : 'create_tribe');
+    if (isLoading || !currentUser || !gameState) return;
+
+    if (view === 'create_tribe' && playerTribe) {
+        setView('game');
+    }
+  }, [gameState, playerTribe, currentUser, view, isLoading]);
+
+  useEffect(() => {
+    if (!playerTribe || !gameState) return;
+
+    let intervalId: number | undefined;
+    const isWaiting = playerTribe.turnSubmitted === true;
+
+    if (isWaiting) {
+        intervalId = window.setInterval(async () => {
+            const latestGameState = await server.getGameState();
+            if (latestGameState.turn > gameState.turn) {
+                setGameState(latestGameState);
+                // View will automatically update based on new turn data in main render logic
+            }
+        }, 8000); // Poll every 8 seconds
+    }
+
+    return () => {
+        if (intervalId) {
+            clearInterval(intervalId);
         }
+    };
+}, [playerTribe?.turnSubmitted, gameState?.turn]);
+
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+    const userTribe = gameState?.tribes.find(t => t.playerId === user.id);
+    if (userTribe) {
+      setView('game');
+    } else if (user.role !== 'admin') {
+      setView('create_tribe');
+    } else {
+      setView('game');
     }
   };
 
-  const handleRegisterSuccess = (user: User, token: string) => {
-    handleLoginSuccess(user, token);
+  const handleRegisterSuccess = (user: User) => {
+    handleLoginSuccess(user);
   };
 
   const handleLogout = () => {
     Auth.logout();
     setCurrentUser(null);
-    setGameState(null);
     setView('login');
   };
 
   const handleTribeCreate = async (tribeData: TribeCreationData) => {
-    try {
-        await api.createTribe(tribeData);
-        await fetchGameState();
-        setView('game');
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to create tribe.');
+    if (!currentUser || !gameState) return;
+
+    const occupiedLocations = new Set(gameState.tribes.map(t => t.location));
+    const availableStart = gameState.startingLocations.find(loc => !occupiedLocations.has(loc));
+    
+    if (!availableStart) {
+      alert("The admin has not set any available starting locations for new players. Please contact the administrator.");
+      return;
     }
+
+    const startCoords = parseHexCoords(availableStart);
+    const initialExplored = getHexesInRange(startCoords, 2);
+
+    const newTribe: Tribe = {
+      ...tribeData,
+      id: `tribe-${Date.now()}`,
+      playerId: currentUser.id,
+      location: availableStart,
+      globalResources: INITIAL_GLOBAL_RESOURCES,
+      garrisons: { [availableStart]: { ...INITIAL_GARRISON, chiefs: [] } },
+      actions: [],
+      turnSubmitted: false,
+      lastTurnResults: [],
+      exploredHexes: initialExplored,
+      rationLevel: 'Normal',
+      completedTechs: [],
+      assets: [],
+      currentResearch: null,
+      journeyResponses: [],
+      diplomacy: {},
+    };
+    
+    const newState = await server.createTribe(newTribe);
+    setGameState(newState);
   };
   
   const handleFinalizePlayerTurn = async (tribeId: string, plannedActions: GameAction[], journeyResponses: Tribe['journeyResponses']) => {
-    try {
-        await api.submitTurn(tribeId, plannedActions, journeyResponses);
-        await fetchGameState();
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to finalize turn.');
-    }
+    const newState = await server.submitTurn({ tribeId, plannedActions, journeyResponses });
+    setGameState(newState);
   };
   
   const handleUpdateTribe = async (updatedTribe: Tribe) => {
-      try {
-        await api.updateTribe(updatedTribe);
-        await fetchGameState();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update tribe.');
-      }
+    const newState = await server.updateTribe(updatedTribe);
+    setGameState(newState);
   };
 
   const handleProcessGlobalTurn = async () => {
-      try {
-        setTransitionMessage('Processing Turn...');
-        setView('transition');
-        await api.processTurn();
-        await fetchGameState();
-        setTransitionMessage('');
-        setView('game');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to process turn.');
-        setView('admin'); // Go back to admin panel on error
-      }
+      const newState = await server.processTurn();
+      setGameState(newState);
   };
 
   const handleUpdateMap = async (newMapData: HexData[], newStartingLocations: string[]) => {
-    try {
-        await api.updateMap(newMapData, newStartingLocations);
-        await fetchGameState();
-        setView('admin');
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update map.');
-    }
+    const newState = await server.updateMap({ newMapData, newStartingLocations });
+    setGameState(newState);
+    setView('admin');
   };
 
   const handleRemovePlayer = async (userIdToRemove: string) => {
-    try {
-        await api.removePlayer(userIdToRemove);
-        await fetchGameState();
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to remove player.');
-    }
+    const newState = await server.removePlayer(userIdToRemove);
+    setGameState(newState);
   };
 
   const handleStartNewGame = async () => {
-    try {
-        await api.startNewGame();
-        await fetchGameState();
-        alert('New game started! All tribes and requests have been removed and the turn has been reset to 1.');
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to start new game.');
-    }
+    const newState = await server.startNewGame();
+    setGameState(newState);
+    alert('New game started! All tribes and requests have been removed and the turn has been reset to 1.');
   };
 
-  const handleLoadBackup = async (backupFile: File) => {
-    try {
-        await api.loadBackup(backupFile);
-        alert('Backup uploaded successfully! The server is processing the state. The game will now reload.');
-        initializeApp(); // Re-initialize the app to fetch the new state
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load backup.');
-        alert(`Error loading backup: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  const handleLoadBackup = async (backup: FullBackupState) => {
+    const newState = await server.loadBackup(backup);
+    
+    if (currentUser) {
+        const reloadedUser = backup.users.find(u => u.id === currentUser.id);
+        if (reloadedUser) {
+            Auth.refreshCurrentUserInSession(reloadedUser);
+            setCurrentUser(reloadedUser);
+        } else {
+            alert('Game state loaded, but your user account was not in the backup. Logging you out.');
+            handleLogout();
+        }
     }
+    
+    setGameState(newState);
+    alert('Game state and all users loaded successfully!');
   };
-  
-  const handleApiAction = async (action: Function, ...args: any[]) => {
-    try {
-        await action(...args);
-        await fetchGameState();
-    } catch(err) {
-        alert(err instanceof Error ? err.message : 'An unknown error occurred.');
-    }
-  };
+
+  // The following functions now just call the server and update state
+  const handleRequestChief = (tribeId: string, chiefName: string, radixAddressSnippet: string) => server.requestChief({ tribeId, chiefName, radixAddressSnippet }).then(setGameState);
+  const handleApproveChief = (requestId: string) => server.approveChief(requestId).then(setGameState);
+  const handleDenyChief = (requestId: string) => server.denyChief(requestId).then(setGameState);
+  const handleRequestAsset = (tribeId: string, assetName: string, radixAddressSnippet: string) => server.requestAsset({ tribeId, assetName, radixAddressSnippet }).then(setGameState);
+  const handleApproveAsset = (requestId: string) => server.approveAsset(requestId).then(setGameState);
+  const handleDenyAsset = (requestId: string) => server.denyAsset(requestId).then(setGameState);
+  const handleAddAITribe = () => server.addAITribe().then(setGameState);
+  const handleProposeAlliance = (fromTribeId: string, toTribeId: string) => server.proposeAlliance({ fromTribeId, toTribeId }).then(setGameState);
+  const handleSueForPeace = (fromTribeId: string, toTribeId: string, reparations: { food: number; scrap: number; weapons: number; }) => server.sueForPeace({ fromTribeId, toTribeId, reparations }).then(setGameState);
+  const handleAcceptProposal = (proposalId: string) => server.acceptProposal(proposalId).then(setGameState);
+  const handleRejectProposal = (proposalId: string) => server.rejectProposal(proposalId).then(setGameState);
+  const handleDeclareWar = (fromTribeId: string, toTribeId: string) => server.declareWar({ fromTribeId, toTribeId }).then(setGameState);
 
   const renderView = () => {
-    if (view === 'loading' || !gameState) {
-        return <TransitionScreen message={gameState ? 'Loading...' : 'Connecting to the Wasteland...'} />;
+    if (isLoading || !gameState) {
+      return <TransitionScreen message="Loading Wasteland..." />;
     }
 
     switch (view) {
       case 'login':
-        return <Login 
-          onLoginSuccess={handleLoginSuccess} 
-          onSwitchToRegister={() => setView('register')} 
-          onNavigateToForgotPassword={() => setView('forgot_password')}
-        />;
+        return <Login onLoginSuccess={handleLoginSuccess} onSwitchToRegister={() => setView('register')} onNavigateToForgotPassword={() => setView('forgot_password')} />;
       
       case 'register':
         return <Register onRegisterSuccess={handleRegisterSuccess} onSwitchToLogin={() => setView('login')} />;
@@ -208,11 +219,10 @@ const App: React.FC = () => {
 
       case 'create_tribe':
         if (!currentUser) { setView('login'); return null; }
-        const usedIcons = gameState.tribes.map(t => t.icon);
-        return <TribeCreation onTribeCreate={handleTribeCreate} user={currentUser} usedIcons={usedIcons} />;
+        return <TribeCreation onTribeCreate={handleTribeCreate} user={currentUser} />;
       
       case 'transition':
-        return <TransitionScreen message={transitionMessage} />;
+        return <TransitionScreen message={'Synchronizing World...'} />;
 
       case 'admin':
         if (!currentUser || currentUser.role !== 'admin') { setView('login'); return null; }
@@ -224,11 +234,11 @@ const App: React.FC = () => {
             onRemovePlayer={handleRemovePlayer}
             onStartNewGame={handleStartNewGame}
             onLoadBackup={handleLoadBackup}
-            onApproveChief={(reqId) => handleApiAction(api.approveChiefRequest, reqId)}
-            onDenyChief={(reqId) => handleApiAction(api.denyChiefRequest, reqId)}
-            onApproveAsset={(reqId) => handleApiAction(api.approveAssetRequest, reqId)}
-            onDenyAsset={(reqId) => handleApiAction(api.denyAssetRequest, reqId)}
-            onAddAITribe={() => handleApiAction(api.addAITribe)}
+            onApproveChief={handleApproveChief}
+            onDenyChief={handleDenyChief}
+            onApproveAsset={handleApproveAsset}
+            onDenyAsset={handleDenyAsset}
+            onAddAITribe={handleAddAITribe}
         />;
       
       case 'map_editor':
@@ -244,18 +254,15 @@ const App: React.FC = () => {
 
       case 'leaderboard':
         if (!currentUser) { setView('login'); return null; }
-        const playerTribeForLeaderboard = gameState.tribes.find(t => t.playerId === currentUser.id);
         return <Leaderboard 
             gameState={gameState}
-            playerTribe={playerTribeForLeaderboard}
+            playerTribe={playerTribe}
             onBack={() => setView('game')}
           />;
 
       case 'game':
       default:
         if (!currentUser) { setView('login'); return null; }
-        const playerTribe = gameState.tribes.find(t => t.playerId === currentUser.id);
-        
         if (!playerTribe && currentUser.role !== 'admin') { setView('create_tribe'); return null; }
 
         return (
@@ -271,17 +278,17 @@ const App: React.FC = () => {
             journeys={gameState.journeys || []}
             diplomaticProposals={gameState.diplomaticProposals || []}
             onFinalizeTurn={(actions, journeyResponses) => playerTribe && handleFinalizePlayerTurn(playerTribe.id, actions, journeyResponses)}
-            onRequestChief={(chiefName, address) => handleApiAction(api.requestChief, playerTribe!.id, chiefName, address)}
-            onRequestAsset={(assetName, address) => handleApiAction(api.requestAsset, playerTribe!.id, assetName, address)}
+            onRequestChief={(chiefName, address) => playerTribe && handleRequestChief(playerTribe.id, chiefName, address)}
+            onRequestAsset={(assetName, address) => playerTribe && handleRequestAsset(playerTribe.id, assetName, address)}
             onUpdateTribe={handleUpdateTribe}
             onLogout={handleLogout}
             onNavigateToAdmin={() => setView('admin')}
             onNavigateToLeaderboard={() => setView('leaderboard')}
-            onProposeAlliance={(toTribeId) => handleApiAction(api.proposeAlliance, playerTribe!.id, toTribeId)}
-            onSueForPeace={(toTribeId, reparations) => handleApiAction(api.sueForPeace, playerTribe!.id, toTribeId, reparations)}
-            onDeclareWar={(toTribeId) => handleApiAction(api.declareWar, playerTribe!.id, toTribeId)}
-            onAcceptProposal={(proposalId) => handleApiAction(api.respondToProposal, proposalId, true)}
-            onRejectProposal={(proposalId) => handleApiAction(api.respondToProposal, proposalId, false)}
+            onProposeAlliance={(toTribeId) => playerTribe && handleProposeAlliance(playerTribe.id, toTribeId)}
+            onSueForPeace={(toTribeId, reparations) => playerTribe && handleSueForPeace(playerTribe.id, toTribeId, reparations)}
+            onDeclareWar={(toTribeId) => playerTribe && handleDeclareWar(playerTribe.id, toTribeId)}
+            onAcceptProposal={handleAcceptProposal}
+            onRejectProposal={handleRejectProposal}
           />
         );
     }
@@ -290,12 +297,6 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 p-0 sm:p-0 lg:p-0">
       <div className="max-w-full">
-        {error && (
-            <div className="bg-red-800 text-white p-4 text-center fixed top-0 left-0 right-0 z-50" role="alert">
-                <strong>Error:</strong> {error}
-                <button onClick={() => setError(null)} className="ml-4 font-bold">X</button>
-            </div>
-        )}
         {renderView()}
       </div>
     </div>

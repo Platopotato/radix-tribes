@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 import { GlobalResources, POIType, POIRarity } from './types';
 
@@ -27,6 +28,25 @@ export const TRIBE_ICONS: { [key: string]: React.ReactNode } = {
   serpent: <path d="M18.36,8.76a1,1,0,0,0-1.41,0L13,12.71V5a1,1,0,0,0-2,0v7.71L7.05,8.76a1,1,0,0,0-1.41,0,1,1,0,0,0,0,1.41l5.66,5.66a1,1,0,0,0,1.41,0l5.66-5.66A1,1,0,0,0,18.36,8.76Z"/>,
   claw: <path d="M20,17.18V5a3,3,0,0,0-3-3H7A3,3,0,0,0,4,5V17.18a3,3,0,0,0,1.24,2.45l.18.13,6,4.3a.49.49,0,0,0,.56,0l6-4.3.18-.13A3,3,0,0,0,20,17.18ZM8,10a1,1,0,1,1,1,1A1,1,0,0,1,8,10Zm4,0a1,1,0,1,1,1,1A1,1,0,0,1,12,10Zm4,0a1,1,0,1,1,1,1A1,1,0,0,1,16,10Z"/>,
 };
+
+export const TRIBE_COLORS: string[] = [
+  '#F56565', // Red
+  '#4299E1', // Blue
+  '#48BB78', // Green
+  '#ED8936', // Orange
+  '#9F7AEA', // Purple
+  '#ECC94B', // Yellow
+  '#38B2AC', // Teal
+  '#ED64A6', // Pink
+  '#A0AEC0', // Gray
+  '#667EEA', // Indigo
+  '#F687B3', // Fuchsia
+  '#D69E2E', // Brown
+  '#319795', // Pine
+  '#6B46C1', // Violet
+  '#C53030', // Dark Red
+  '#059669', // Dark Green
+];
 
 export const POI_SYMBOLS: { [key in POIType]: string } = {
     [POIType.Scrapyard]: 'S',

@@ -1,4 +1,3 @@
-
 import { Tribe, GameAction, ActionType, HexData, Chief, RationLevel, ResearchProject, GameState, TerrainType, TechnologyEffectType, Garrison, POIType, POI, Journey, JourneyType, DiplomaticStatus, DiplomaticProposal } from '../types';
 import { getHexesInRange, parseHexCoords, formatHexCoords, axialDistance, findPath } from './mapUtils';
 import { getTechnology } from './technologyData';
@@ -79,7 +78,7 @@ function handleRandomMoveEvent(movingForce: { troops: number, weapons: number, c
 // These functions are called when a journey reaches its destination.
 
 function resolveBuildOutpostArrival(journey: Journey, tribe: Tribe, results: GameAction[]): { updatedTribe: Tribe, outpostCreatedLocation?: string } {
-    let updatedTribe = JSON.parse(JSON.stringify(tribe));
+    let updatedTribe: Tribe = JSON.parse(JSON.stringify(tribe));
     const SCRAP_COST = 25; // As per action definition info
     
     // TODO: A check to see if another tribe built here in the same turn would be good.
@@ -112,7 +111,7 @@ function resolveBuildOutpostArrival(journey: Journey, tribe: Tribe, results: Gam
 }
 
 function resolveScoutArrival(journey: Journey, tribe: Tribe, state: GameState, results: GameAction[]): { updatedTribe: Tribe; newReturnJourney?: Journey } {
-    let updatedTribe = JSON.parse(JSON.stringify(tribe));
+    let updatedTribe: Tribe = JSON.parse(JSON.stringify(tribe));
     const scoutRange = 1; // Simplified for now. Could be affected by chief stats.
     const { q, r } = parseHexCoords(journey.destination);
     const revealedHexes = getHexesInRange({ q, r }, scoutRange);
@@ -154,7 +153,7 @@ function resolveScoutArrival(journey: Journey, tribe: Tribe, state: GameState, r
 }
 
 function resolveMoveArrival(journey: Journey, tribe: Tribe, results: GameAction[]): Tribe {
-    let updatedTribe = JSON.parse(JSON.stringify(tribe));
+    let updatedTribe: Tribe = JSON.parse(JSON.stringify(tribe));
     if (!updatedTribe.garrisons[journey.destination]) {
         updatedTribe.garrisons[journey.destination] = { troops: 0, weapons: 0, chiefs: [] };
     }
@@ -176,7 +175,7 @@ function resolveMoveArrival(journey: Journey, tribe: Tribe, results: GameAction[
 }
 
 function resolveScavengeArrival(journey: Journey, tribe: Tribe, state: GameState, results: GameAction[]): { updatedTribe: Tribe; newReturnJourney?: Journey, poiToClear?: string } {
-    let updatedTribe = JSON.parse(JSON.stringify(tribe));
+    let updatedTribe: Tribe = JSON.parse(JSON.stringify(tribe));
     const resource_type = journey.scavengeType;
     const { troops: scavengers, weapons, chiefs: scavengingChiefs } = journey.force;
     let poiToClear: string | undefined = undefined;
@@ -257,7 +256,7 @@ function resolveScavengeArrival(journey: Journey, tribe: Tribe, state: GameState
 
 
 function resolveReturnArrival(journey: Journey, tribe: Tribe, results: GameAction[]): Tribe {
-    let updatedTribe = JSON.parse(JSON.stringify(tribe));
+    let updatedTribe: Tribe = JSON.parse(JSON.stringify(tribe));
     if (!updatedTribe.garrisons[journey.destination]) {
         updatedTribe.garrisons[journey.destination] = { troops: 0, weapons: 0, chiefs: [] };
     }
@@ -333,7 +332,7 @@ function processBuildWeapons(tribe: Tribe, action: GameAction): { tribe: Tribe, 
     if (scrapUsed > tribe.globalResources.scrap) return { tribe, result: { ...action, result: `Not enough global scrap.` } };
     
     const weaponsBuilt = Math.floor(scrapUsed * 0.4 * (1 + (tribe.stats.intelligence * 0.02)));
-    const updatedTribe = JSON.parse(JSON.stringify(tribe));
+    const updatedTribe: Tribe = JSON.parse(JSON.stringify(tribe));
     updatedTribe.globalResources.scrap -= scrapUsed;
     if (!updatedTribe.garrisons[start_location]) updatedTribe.garrisons[start_location] = { troops: 0, weapons: 0, chiefs: [] };
     updatedTribe.garrisons[start_location].weapons += weaponsBuilt;

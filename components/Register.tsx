@@ -1,13 +1,12 @@
-
 import React, { useState } from 'react';
-import * as api from '../lib/api';
+import * as Auth from '../lib/auth';
 import { User } from '../types';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { SECURITY_QUESTIONS } from '../constants';
 
 interface RegisterProps {
-  onRegisterSuccess: (user: User, token: string) => void;
+  onRegisterSuccess: (user: User) => void;
   onSwitchToLogin: () => void;
 }
 
@@ -18,9 +17,8 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onSwitchToLogin 
   const [securityQuestion, setSecurityQuestion] = useState(SECURITY_QUESTIONS[0]);
   const [securityAnswer, setSecurityAnswer] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -36,15 +34,19 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onSwitchToLogin 
       setError('Security answer is required.');
       return;
     }
-    
-    setIsLoading(true);
-    try {
-        const { user, token } = await api.register(username, password, securityQuestion, securityAnswer);
-        onRegisterSuccess(user, token);
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred during registration.');
-    } finally {
-        setIsLoading(false);
+
+    const { user, error: registerError } = Auth.register(username, password, securityQuestion, securityAnswer);
+
+    if (registerError) {
+      setError(registerError);
+    } else if (user) {
+      // Automatically log in the user after successful registration
+      const loggedInUser = Auth.login(username, password);
+      if (loggedInUser) {
+        onRegisterSuccess(loggedInUser);
+      } else {
+        setError('Registration succeeded, but login failed. Please try logging in manually.');
+      }
     }
   };
 
@@ -61,7 +63,6 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onSwitchToLogin 
               onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200 focus:ring-amber-500 focus:border-amber-500"
               required
-              disabled={isLoading}
             />
           </div>
           <div>
@@ -73,7 +74,6 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onSwitchToLogin 
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200 focus:ring-amber-500 focus:border-amber-500"
               required
-              disabled={isLoading}
             />
           </div>
           <div>
@@ -85,7 +85,6 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onSwitchToLogin 
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200 focus:ring-amber-500 focus:border-amber-500"
               required
-              disabled={isLoading}
             />
           </div>
 
@@ -98,7 +97,6 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onSwitchToLogin 
                   value={securityQuestion}
                   onChange={(e) => setSecurityQuestion(e.target.value)}
                   className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200 focus:ring-amber-500 focus:border-amber-500"
-                  disabled={isLoading}
                 >
                   {SECURITY_QUESTIONS.map(q => <option key={q} value={q}>{q}</option>)}
                 </select>
@@ -112,15 +110,14 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onSwitchToLogin 
                   onChange={(e) => setSecurityAnswer(e.target.value)}
                   className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 text-slate-200 focus:ring-amber-500 focus:border-amber-500"
                   required
-                  disabled={isLoading}
                 />
             </div>
           </div>
 
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Registering...' : 'Register'}
+          <Button type="submit" className="w-full">
+            Register
           </Button>
           <p className="text-sm text-center text-slate-400">
             Already have an account?{' '}

@@ -137,7 +137,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   if (!playerTribe && currentUser.role === 'admin') {
       return (
           <div className="p-8">
-              <Header currentUser={currentUser} onLogout={onLogout} onNavigateToAdmin={onNavigateToAdmin} turn={turn} gamePhase="observing" onOpenHelp={() => setIsHelpModalOpen(true)} onOpenCodex={() => setIsCodexOpen(false)} />
+              <Header currentUser={currentUser} onLogout={onLogout} onNavigateToAdmin={onNavigateToAdmin} turn={turn} gamePhase="observing" onOpenHelp={() => setIsHelpModalOpen(true)} onOpenCodex={() => setIsCodexOpen(true)} />
               <h2 className="text-2xl font-bold text-center mt-8">Admin Observer Mode</h2>
               <p className="text-center text-slate-400">Select "Admin Panel" from the header to view game details.</p>
               <MapView 

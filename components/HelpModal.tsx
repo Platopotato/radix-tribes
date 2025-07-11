@@ -38,12 +38,12 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 const GameRulesContent: React.FC = () => (
     <>
         <Section title="The Turn Cycle">
-            <p>This is a multiplayer turn-based game where an Admin processes turns for all players simultaneously. The workflow is now much simpler:</p>
+            <p>This game runs on a turn-based system, managed automatically by the game server.</p>
              <ul className="list-disc list-inside space-y-2 pl-4">
-                <li><strong className="text-white">1. Planning Phase:</strong> This is where you play! Assign actions to your tribe using the Action Panel. When you're done, click "Finalize Actions". Your view will change to "Waiting for Admin".</li>
-                <li><strong className="text-white">2. Admin Processing:</strong> Once all players have submitted their turns, the Admin will click "Process All Turns" in their Admin Panel. This runs all the game logic on the server.</li>
-                <li><strong className="text-white">3. Automatic Update:</strong> The game will automatically refresh for all players. There is no need to manually download or sync any files.</li>
-                <li><strong className="text-white">4. Results Phase:</strong> After the game refreshes, you will see the results of the previous turn. Review them, and then click "Start Planning Next Turn" to begin your next move!</li>
+                <li><strong className="text-white">1. Planning Phase:</strong> This is where you play! Assign actions to your tribe. When you're done, click "Finalize Actions". Your status will change to "Waiting".</li>
+                <li><strong className="text-white">2. Admin Processing:</strong> Once all players have submitted their turns, the Admin will click "Process Turn" in the Admin Panel. This tells the server to calculate the results for all tribes.</li>
+                <li><strong className="text-white">3. Automatic Update:</strong> After the Admin processes the turn, the game will automatically update for you. You don't need to do anything. The "Waiting" screen will be replaced by the results of the previous turn.</li>
+                <li><strong className="text-white">4. Results Phase:</strong> Review the outcome of your actions and start planning your next turn!</li>
             </ul>
         </Section>
         <Section title="Diplomacy">
@@ -55,7 +55,7 @@ const GameRulesContent: React.FC = () => (
             </ul>
         </Section>
         <Section title="Journeys & Travel Time">
-            <p>Actions involving travel use the <strong className="text-white">Journey</strong> system, which has two speeds:</p>
+            <p>Actions involving travel now use the <strong className="text-white">Journey</strong> system, which has two speeds:</p>
             <ul className="list-disc list-inside space-y-1 pl-4">
                 <li><strong className="text-white">Fast-Track Travel:</strong> Very short, non-aggressive journeys (e.g., Move, Scavenge, Scout to a nearby hex) are now resolved <strong className="text-amber-400">instantly</strong> during turn processing. A quick scavenge run will see your troops return with loot, ready for your next turn, all in one go.</li>
                 <li><strong className="text-white">Standard Journeys:</strong> Longer journeys and all <strong className="text-red-400">Attack</strong> actions will always take at least one turn. These are dispatched as traveling groups that you can see on the map and track in the "Active Journeys" panel. This preserves the strategic warning for attacks.</li>

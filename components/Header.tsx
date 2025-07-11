@@ -74,20 +74,18 @@ const Header: React.FC<HeaderProps> = ({ currentUser, playerTribe, onLogout, onN
          )}
          <Button onClick={onOpenCodex} variant="secondary" className="flex items-center space-x-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13c-1.168.776-2.754 1.253-4.5 1.253s-3.332-.477-4.5-1.253" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
             <span>Codex</span>
-         </Button>
+          </Button>
          <Button onClick={onOpenHelp} variant="secondary" className="flex items-center space-x-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4s-1.79 4-4 4-4-1.79-4-4c0-1.193.42-2.28 1.13-3.134l-1.42-1.42a7.96 7.96 0 00-2.825 5.555c0 4.418 3.582 8 8 8s8-3.582 8-8-3.582-8-8-8c-1.79 0-3.43.58-4.784 1.543l1.542 1.543z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4 0 .863-.37 1.64-.945 2.201a3.978 3.978 0 01-2.122 1.015M12 18v.01M12 21a9 9 0 110-18 9 9 0 010 18z" />
             </svg>
             <span>Help</span>
-         </Button>
-        {currentUser.role === 'admin' && (
-          <Button onClick={onNavigateToAdmin} variant="secondary">Admin Panel</Button>
-        )}
-        <Button onClick={onLogout} variant="secondary">Logout</Button>
+          </Button>
+         {currentUser.role === 'admin' && <Button onClick={onNavigateToAdmin} variant="secondary">Admin Panel</Button>}
+         <Button onClick={onLogout}>Logout</Button>
       </div>
     </header>
   );
